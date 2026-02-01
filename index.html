@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart-Q 2.0</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Techy font */
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .terminal-container {
+            width: 500px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 128, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            background: #21262d;
+            padding: 10px 20px;
+            border-bottom: 1px solid #30363d;
+            font-size: 0.9rem;
+            color: #58a6ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            background-color: #2ea043;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 5px #2ea043;
+        }
+        .chat-window {
+            height: 400px;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .msg {
+            max-width: 85%;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .user {
+            align-self: flex-end;
+            background: #1f6feb;
+            color: white;
+            border-bottom-right-radius: 0;
+        }
+        .ai {
+            align-self: flex-start;
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #58a6ff;
+            border-bottom-left-radius: 0;
+        }
+        .input-zone {
+            padding: 15px;
+            background: #21262d;
+            border-top: 1px solid #30363d;
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            flex-grow: 1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            outline: none;
+        }
+        input:focus { border-color: #58a6ff; }
+        button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #2ea043; }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="terminal-container">
+    <div class="header">
+        <span>SMART-Q CORE [v2.0]</span>
+        <span class="status-dot"></span>
+    </div>
+    <div class="chat-window" id="chatWindow">
+        <div class="msg ai">System initialized. Logic core loaded. Awaiting input...</div>
+    </div>
+    <div class="input-zone">
+        <input type="text" id="userInput" placeholder="Enter command or query..." autocomplete="off">
+        <button onclick="handleUserSubmit()">EXECUTE</button>
+    </div>
+</div>
+
+<!-- Linking the separate AI Brain -->
+<script src="ai.js"></script>
+<script>
+    // This script handles the UI events and connects to the Brain in ai.js
+    
+    const chatWindow = document.getElementById('chatWindow');
+    const userInput = document.getElementById('userInput');
+
+    function appendMessage(text, type) {
+        const div = document.createElement('div');
+        div.className = `msg ${type}`;
+        div.innerText = text;
+        chatWindow.appendChild(div);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    async function handleUserSubmit() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        appendMessage(text, 'user');
+        userInput.value = "";
+
+        // Add a small delay to simulate "processing"
+        appendMessage("Analyzing...", "ai");
+        
+        setTimeout(() => {
+            // Remove the "Analyzing" message (the last child)
+            chatWindow.removeChild(chatWindow.lastChild);
+            
+            // Call the BRAIN from ai.js
+            const response = SmartQ.process(text);
+            appendMessage(response, "ai");
+        }, 600);
+    }
+
+    // Allow Enter key
+    userInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") handleUserSubmit();
+    });
+</script>
+
+</body>
+</html>
