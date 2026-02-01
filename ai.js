@@ -1,152 +1,116 @@
 /**
- * SMART-Q LOGIC CORE
- * This file contains the "thinking" engine.
- * It uses a scoring algorithm to find the best match for user input.
+ * SMART-Q NEURAL CORE
+ * Architecture: Single-Layer Perceptron (Logistic Regression)
+ * Uses: Matrix Multiplication, Sigmoid Activation
  */
 
-const SmartQ = (function() {
+const NeuralCore = (function() {
     
-    // --- KNOWLEDGE BASE ---
-    // The more examples we have, the smarter it gets.
-    const knowledge = {
-        "greeting": {
-            triggers: ["hello", "hi", "hey", "greetings", "yo", "sup", "good morning", "good afternoon"],
-            responses: ["Greetings. Systems are operational.", "Hello! How can I assist you?", "Hi there. Ready for input.", "Acknowledged. Hello."]
-        },
-        "identity": {
-            triggers: ["who are you", "what are you", "your name", "tell me about yourself"],
-            responses: ["I am Smart-Q, a heuristic logic engine running in your browser.", "Identity: Smart-Q. Purpose: Assistance via logic.", "I am a self-contained AI model."],
-            context: "identity"
-        },
-        "capabilities": {
-            triggers: ["what can you do", "help me", "features", "functions", "abilities"],
-            responses: ["I can process natural language, do math, tell time, and simulate conversation based on pattern recognition.", "My functions include: chatting, calculation, and timekeeping."]
-        },
-        "mood": {
-            triggers: ["how are you", "how do you feel", "are you okay", "status"],
-            responses: ["Operating at 100% efficiency.", "All systems nominal. I feel... electric.", "I am functioning within optimal parameters."]
-        },
-        "creator": {
-            triggers: ["who made you", "who created you", "author", "origin"],
-            responses: ["I was written in JavaScript by a developer.", "My creator is the one holding the keyboard."]
-        },
-        "jokes": {
-            triggers: ["joke", "funny", "laugh", "humor me", "tell me a joke"],
-            responses: [
-                "Why do Java developers wear glasses? Because they don't C#.",
-                "I would tell you a UDP joke, but you might not get it.",
-                "There are only 10 types of people in the world: those who understand binary and those who don't."
-            ]
-        },
-        "farewell": {
-            triggers: ["bye", "goodbye", "exit", "quit", "see you", "cya"],
-            responses: ["Terminating session. Goodbye.", "Shutting down logic core. Bye!", "Until next time."]
-        },
-        "math": {
-            // Special category handled in logic
-            isSpecial: true,
-            triggers: ["calculate", "solve", "math", "plus", "minus", "times", "divide", "+"],
-            responses: ["I can do math. Just say the equation (e.g. '5 times 5')."]
-        },
-        "time": {
-            // Special category handled in logic
-            isSpecial: true,
-            triggers: ["time", "date", "clock", "day", "year"],
-            responses: ["Checking system clock..."]
-        },
-        "thanks": {
-            triggers: ["thank", "thanks", "appreciate"],
-            responses: ["You are welcome.", "Happy to be of service.", "Acknowledged."]
-        },
-        "unknown": {
-            responses: [
-                "Input not recognized. Please rephrase.", 
-                "My logic database does not contain a match for that.", 
-                "Could you clarify? I want to understand.",
-                "Interesting. Tell me more about that."
-            ]
-        }
-    };
+    // 1. VOCABULARY (The Input Layer)
+    // We map words to indices. Our network only understands these indices.
+    const vocab = [
+        "hello", "hi", "hey", "greetings", // Greetings
+        "bye", "goodbye", "exit", "quit",  // Farewells
+        "who", "you", "name", "identity",  // Identity
+        "joke", "funny", "laugh",          // Humor
+        "time", "date", "clock",           // Time
+        "thanks", "thank"                  // Gratitude
+    ];
 
-    // --- LOGIC ENGINE ---
+    // 2. THE BRAIN (Weights & Biases)
+    // These represent the "Synapses". 
+    // High positive numbers = Strong connection.
+    // Negative numbers = Inhibition.
+    
+    // Rows = Output Neurons, Cols = Input Vocabulary
+    // Outputs: [Greeting, Farewell, Identity, Humor, Time, Thanks]
+    const weights = [
+        // hello, hi, hey, greets, bye, exit, quit, who, you, name, id, joke, fun, laugh, time, date, clk, thx, tk
+        [ 2.5,  2.0, 1.8,  2.2,  -5,  -5,  -5,  -1,  -1,  -1,  -1,  -5,  -5,   -5,   -5,   -5,   -5,  -5, -5 ], // Greeting
+        [ -5,   -5,  -5,   -5,  2.5,  2.0,  2.2, -1,  -1,  -1,  -1,  -5,  -5,   -5,   -5,   -5,   -5,  -5, -5 ], // Farewell
+        [ -1,   -1,  -1,   -1,  -5,  -5,  -5,  2.0,  2.5, 2.0,  2.2, -5,  -5,   -5,   -5,   -5,   -5,  -5, -5 ], // Identity
+        [ -2,   -2,  -2,   -2,  -5,  -5,  -5,  -5,  -5,  -5,  -5,  2.5,  2.2,  2.0,  -5,   -5,   -5,  -5, -5 ], // Humor
+        [ -5,   -5,  -5,   -5,  -5,  -5,  -5,  -5,  -5,  -5,  -5,  -5,  -5,   -5,   2.5,  2.5,  2.5, -5, -5 ], // Time
+        [ -5,   -5,  -5,   -5,  -5,  -5,  -5,  -5,  -5,  -5,  -5,  -5,  -5,   -5,   -5,   -5,   -5,  2.5, 2.5]  // Thanks
+    ];
 
-    function tokenize(input) {
-        // Remove punctuation and split into lowercase words
-        return input.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/);
+    const biases = [-1.5, -1.5, -1.5, -1.5, -1.5, -1.5]; // Thresholds to prevent false positives
+
+    const labels = ["Greeting", "Farewell", "Identity", "Humor", "Time", "Thanks"];
+
+    // 3. ACTIVATION FUNCTION (Sigmoid)
+    // Squashes any number to between 0 and 1 (Probability)
+    function sigmoid(x) {
+        return 1 / (1 + Math.exp(-x));
     }
 
-    function calculateScore(inputTokens, triggerTokens) {
-        let score = 0;
-        inputTokens.forEach(token => {
-            if (triggerTokens.includes(token)) {
-                score++;
+    // 4. VECTORIZATION
+    // Converts string "hello world" into [1, 0, 0, 0...]
+    function vectorize(text) {
+        const tokens = text.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/);
+        let vector = new Array(vocab.length).fill(0);
+        
+        tokens.forEach(word => {
+            const index = vocab.indexOf(word);
+            if (index !== -1) {
+                vector[index] = 1; // One-hot encoding (presence of word)
             }
         });
-        return score;
+        return vector;
     }
 
-    function process(input) {
-        const tokens = tokenize(input);
-        let bestMatch = null;
-        let highestScore = 0;
+    // 5. FEED FORWARD ALGORITHM
+    function predict(inputText) {
+        const inputVector = vectorize(inputText);
+        let maxProb = 0;
+        let bestLabel = "Unknown";
+        let confidence = 0;
 
-        // 1. Check for Special Functions (Math & Time) first
-        if (tokens.some(t => ["time", "date", "clock"].includes(t))) {
-            return "Current system time: " + new Date().toLocaleString();
-        }
-
-        // Simple Math Parser
-        if (tokens.some(t => ["+", "-", "*", "/", "plus", "minus", "times", "divided"].includes(t))) {
-            try {
-                // Clean up text math to JS math
-                let mathStr = input.toLowerCase()
-                    .replace("plus", "+")
-                    .replace("minus", "-")
-                    .replace("times", "*")
-                    .replace("divided by", "/")
-                    .replace(/[^0-9+\-*/.]/g, ''); // Keep only numbers and operators
-                
-                if(mathStr) {
-                    const result = Function('"use strict";return (' + mathStr + ')')();
-                    return "Calculation result: " + result;
-                }
-            } catch (e) {
-                return "Math error: Invalid expression.";
-            }
-        }
-
-        // 2. Semantic Scoring (The "Thinking" part)
-        for (const key in knowledge) {
-            if (key === "unknown") continue;
+        // Calculate output for each neuron
+        for (let i = 0; i < weights.length; i++) {
+            let sum = biases[i]; // Start with bias
             
-            const category = knowledge[key];
-            let categoryScore = 0;
+            // Dot Product: Input * Weights
+            for (let j = 0; j < inputVector.length; j++) {
+                sum += inputVector[j] * weights[i][j];
+            }
 
-            category.triggers.forEach(triggerPhrase => {
-                const triggerTokens = tokenize(triggerPhrase);
-                categoryScore += calculateScore(tokens, triggerTokens);
-            });
+            const probability = sigmoid(sum);
 
-            if (categoryScore > highestScore) {
-                highestScore = categoryScore;
-                bestMatch = category;
+            // Softmax-style selection (Winner takes all)
+            if (probability > maxProb && probability > 0.5) { // 0.5 is our confidence threshold
+                maxProb = probability;
+                bestLabel = labels[i];
+                confidence = probability;
             }
         }
 
-        // 3. Determine Response
-        if (bestMatch && highestScore > 0) {
-            const responses = bestMatch.responses;
-            return responses[Math.floor(Math.random() * responses.length)];
-        } else {
-            // Fallback
-            const fallback = knowledge.unknown.responses;
-            return fallback[Math.floor(Math.random() * fallback.length)];
-        }
+        return generateResponse(bestLabel, confidence);
     }
 
-    // Public API
+    function generateResponse(label, conf) {
+        if (label === "Unknown") {
+            return `[CONFIDENCE: LOW] Input pattern unrecognized. My neural weights do not match this vector.`;
+        }
+        
+        const responses = {
+            "Greeting": `[NEURON: GREETING FIRED] Hello. I processed your input with ${Math.floor(conf*100)}% confidence.`,
+            "Farewell": `[NEURON: FAREWELL FIRED] Goodbye. Session terminating.`,
+            "Identity": `[NEURON: IDENTITY FIRED] I am a mathematical model of neurons. I do not have a name, only weights.`,
+            "Humor": `[NEURON: HUMOR FIRED] Processing humor... Why do neural networks love bad jokes? Because they can't resist the pun-ishment.`,
+            "Time": `[NEURON: TIME FIRED] Current system timestamp: ${new Date().toLocaleTimeString()}.`,
+            "Thanks": `[NEURON: GRATITUDE FIRED] Acknowledged. No training data required for that.`
+        };
+
+        return responses[label];
+    }
+
+    // Expose the predict function
     return {
-        process: process
+        predict: predict
     };
 
 })();
+
+
+Copy
