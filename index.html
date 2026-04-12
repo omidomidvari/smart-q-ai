@@ -2,165 +2,134 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart-Q</title>
+    <title>Wiktionary Autonomous Brain</title>
+    <script src="https://cloudflare.com"></script>
     <style>
-        body {
-            font-family: 'Courier New', Courier, monospace; /* Techy font */
-            background-color: #0d1117;
-            color: #c9d1d9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .terminal-container {
-            width: 500px;
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0, 255, 128, 0.1);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .header {
-            background: #21262d;
-            padding: 10px 20px;
-            border-bottom: 1px solid #30363d;
-            font-size: 0.9rem;
-            color: #58a6ff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .status-dot {
-            height: 10px;
-            width: 10px;
-            background-color: #2ea043;
-            border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 5px #2ea043;
-        }
-        .chat-window {
-            height: 400px;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .msg {
-            max-width: 85%;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            line-height: 1.4;
-        }
-        .user {
-            align-self: flex-end;
-            background: #1f6feb;
-            color: white;
-            border-bottom-right-radius: 0;
-        }
-        .ai {
-            align-self: flex-start;
-            background: #21262d;
-            border: 1px solid #30363d;
-            color: #58a6ff;
-            border-bottom-left-radius: 0;
-        }
-        .input-zone {
-            padding: 15px;
-            background: #21262d;
-            border-top: 1px solid #30363d;
-            display: flex;
-            gap: 10px;
-        }
-        input {
-            flex-grow: 1;
-            background: #0d1117;
-            border: 1px solid #30363d;
-            color: white;
-            padding: 10px;
-            border-radius: 4px;
-            outline: none;
-        }
-        input:focus { border-color: #58a6ff; }
-        button {
-            background: #238636;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        button:hover { background: #2ea043; }
-        /* Scrollbar styling */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #0d1117; }
-        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        body { margin: 0; overflow: hidden; background: #0f0f1a; font-family: 'Courier New', monospace; }
+        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; border: 1px solid #444; }
+        input { padding: 10px; width: 250px; background: #111; color: #0f0; border: 1px solid #0f0; outline: none; }
+        button { padding: 10px; cursor: pointer; background: #0f0; color: #000; border: none; font-weight: bold; }
+        #log { position: absolute; bottom: 20px; left: 20px; color: #0f0; max-height: 150px; overflow: hidden; pointer-events: none; }
     </style>
 </head>
 <body>
 
-<div class="terminal-container">
-    <div class="header">
-        <span>SMART-Q</span>
-        <span class="status-dot"></span>
-    </div>
-    <div class="chat-window" id="chatWindow">
-        <div class="msg ai">message smart-q.</div>
-    </div>
-    <div class="input-zone">
-        <input type="text" id="userInput" placeholder="Enter command or query..." autocomplete="off">
-        <button onclick="handleUserSubmit()">EXECUTE</button>
-    </div>
+<div id="ui">
+    <input type="text" id="wordInput" placeholder="Talk to the brain...">
+    <button onclick="handleInput()">SEND</button>
 </div>
+<div id="log"></div>
+<div id="container"></div>
 
-<!-- Linking the separate AI Brain -->
-<script src="ai.js"></script>
 <script>
-    // This script handles the UI events and connects to the Brain in ai.js
-    
-    const chatWindow = document.getElementById('chatWindow');
-    const userInput = document.getElementById('userInput');
+    const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+    const engine = Engine.create();
+    engine.gravity.y = 0.3; 
 
-    function appendMessage(text, type) {
-        const div = document.createElement('div');
-        div.className = `msg ${type}`;
-        div.innerText = text;
-        chatWindow.appendChild(div);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
-
-    async function handleUserSubmit() {
-        const text = userInput.value.trim();
-        if (!text) return;
-
-        appendMessage(text, 'user');
-        userInput.value = "";
-
-        // Add a small delay to simulate "processing"
-        appendMessage("Analyzing...", "ai");
-        
-        setTimeout(() => {
-            // Remove the "Analyzing" message (the last child)
-            chatWindow.removeChild(chatWindow.lastChild);
-            
-            // Call the BRAIN from ai.js
-            const response = SmartQ.process(text);
-            appendMessage(response, "ai");
-        }, 600);
-    }
-
-    // Allow Enter key
-    userInput.addEventListener("keypress", function(event) {
-        if (event.key === "Enter") handleUserSubmit();
+    const render = Render.create({
+        element: document.getElementById('container'),
+        engine: engine,
+        options: { width: window.innerWidth, height: window.innerHeight, wireframes: false, background: '#0f0f1a' }
     });
-</script>
 
+    const ground = Bodies.rectangle(window.innerWidth/2, window.innerHeight+20, window.innerWidth, 60, { isStatic: true });
+    const wallL = Bodies.rectangle(-20, window.innerHeight/2, 60, window.innerHeight, { isStatic: true });
+    const wallR = Bodies.rectangle(window.innerWidth+20, window.innerHeight/2, 60, window.innerHeight, { isStatic: true });
+    Composite.add(engine.world, [ground, wallL, wallR]);
+
+    async function handleInput() {
+        const input = document.getElementById('wordInput');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = "";
+
+        const agents = Composite.allBodies(engine.world).filter(b => b.isAgent);
+        let foundMatch = false;
+
+        agents.forEach(agent => {
+            if (text.toLowerCase().includes(agent.word.toLowerCase())) {
+                respond(agent, `You mentioned me! I am defined as: ${agent.definition}.`);
+                Body.applyForce(agent, agent.position, { x: 0, y: -0.1 });
+                foundMatch = true;
+            }
+        });
+
+        if (!foundMatch) {
+            spawnNewThought(text);
+        }
+    }
+
+    async function spawnNewThought(word) {
+        try {
+            const res = await fetch(`https://wiktionary.org{word.toLowerCase()}`);
+            const data = await res.json();
+            const definition = data.en[0].definitions[0].definition.replace(/<[^>]*>?/gm, '');
+            
+            const bubble = Bodies.rectangle(Math.random()*window.innerWidth, 50, 200, 60, {
+                frictionAir: 0.05,
+                restitution: 0.6,
+                render: { fillStyle: '#111', strokeStyle: '#0f0', lineWidth: 2 }
+            });
+
+            bubble.word = word;
+            bubble.definition = definition;
+            bubble.isAgent = true;
+            bubble.chat = `I have arrived. My essence is: ${definition}`;
+            
+            Composite.add(engine.world, bubble);
+            addToLog(`New entity spawned: ${word}`);
+        } catch (e) {
+            addToLog(`The brain doesn't know "${word}" yet.`);
+        }
+    }
+
+    function respond(agent, message) {
+        agent.chat = message;
+        addToLog(`${agent.word.toUpperCase()}: ${message}`);
+        setTimeout(() => { agent.chat = null; }, 6000);
+    }
+
+    function addToLog(msg) {
+        const log = document.getElementById('log');
+        log.innerHTML += `<div>> ${msg}</div>`;
+        if (log.childNodes.length > 5) log.removeChild(log.firstChild);
+    }
+
+    // AI PATROL LOOP: Move agents autonomously
+    Events.on(engine, 'beforeUpdate', () => {
+        Composite.allBodies(engine.world).forEach(body => {
+            if (body.isAgent) {
+                // Random "thinking" movement
+                const wanderForce = (Math.random() - 0.5) * 0.001;
+                Body.applyForce(body, body.position, { x: wanderForce, y: -0.001 });
+            }
+        });
+    });
+
+    // RENDER TEXT BUBBLES
+    Events.on(render, 'afterRender', () => {
+        const ctx = render.context;
+        Composite.allBodies(engine.world).forEach(body => {
+            if (body.word) {
+                ctx.fillStyle = "#0f0";
+                ctx.font = "bold 14px Courier New";
+                ctx.fillText(body.word.toUpperCase(), body.position.x - 40, body.position.y - 10);
+                
+                if (body.chat) {
+                    ctx.fillStyle = "white";
+                    ctx.font = "10px Courier New";
+                    const lines = body.chat.match(/.{1,30}/g); // Wrap text
+                    lines.forEach((line, i) => {
+                        ctx.fillText(line, body.position.x - 90, body.position.y + 15 + (i * 12));
+                    });
+                }
+            }
+        });
+    });
+
+    Render.run(render);
+    Runner.run(Runner.create(), engine);
+</script>
 </body>
 </html>
+
